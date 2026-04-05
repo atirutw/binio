@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <iostream>
 #include <sstream>
+#include <type_traits>
+#include <utility>
 
 namespace {
 
@@ -11,6 +13,52 @@ struct Sample {
   std::uint16_t a;
   std::uint32_t b;
 };
+
+struct NonTrivial {
+  ~NonTrivial() {}
+  std::uint32_t value;
+};
+
+template <typename T> class can_read {
+  template <typename U>
+  static auto test(int) -> decltype(binio::read(std::declval<std::istream &>(),
+                                                std::declval<U &>()),
+                                    std::true_type());
+
+  template <typename> static std::false_type test(...);
+
+public:
+  static const bool value = decltype(test<T>(0))::value;
+};
+
+template <typename T> class can_write {
+  template <typename U>
+  static auto test(int) -> decltype(binio::write(std::declval<std::ostream &>(),
+                                                 std::declval<const U &>()),
+                                    std::true_type());
+
+  template <typename> static std::false_type test(...);
+
+public:
+  static const bool value = decltype(test<T>(0))::value;
+};
+
+static_assert(can_read<std::uint32_t>::value,
+              "read should accept trivially copyable scalar types");
+static_assert(can_write<std::uint32_t>::value,
+              "write should accept trivially copyable scalar types");
+static_assert(can_read<Sample>::value,
+              "read should accept trivially copyable struct types");
+static_assert(can_write<Sample>::value,
+              "write should accept trivially copyable struct types");
+static_assert(!can_read<std::uint32_t *>::value,
+              "read should reject pointer types");
+static_assert(!can_write<std::uint32_t *>::value,
+              "write should reject pointer types");
+static_assert(!can_read<NonTrivial>::value,
+              "read should reject non-trivially-copyable types");
+static_assert(!can_write<NonTrivial>::value,
+              "write should reject non-trivially-copyable types");
 
 bool test_integer_roundtrip() {
   std::stringstream stream;
