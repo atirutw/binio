@@ -16,3 +16,5 @@ install_headers(
     'include/binio/write.hpp',
     subdir: 'binio',
 )
+
+meson.override_dependency('binio', binio_dep)
