@@ -1,0 +1,45 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "process",
+            "label": "Setup",
+            "command": "meson",
+            "args": [
+                "setup",
+                "${workspaceFolder}/build",
+            ],
+            "problemMatcher": []
+        },
+        {
+            "type": "process",
+            "label": "Build",
+            "command": "meson",
+            "args": [
+                "compile",
+                "-C",
+                "${workspaceFolder}/build"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "type": "process",
+            "label": "Test",
+            "command": "meson",
+            "args": [
+                "test",
+                "-C",
+                "${workspaceFolder}/build"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
