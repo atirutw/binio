@@ -4,3 +4,7 @@ project('binio' 'cpp',
         'cpp_std=c++11',
     ],
 )
+
+binio_dep = declare_dependency(
+    include_directories: include_directories('include')
+)
