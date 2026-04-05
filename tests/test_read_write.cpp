@@ -4,15 +4,11 @@
 #include <cstdint>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <type_traits>
 #include <utility>
 
 namespace {
-
-struct Sample {
-  std::uint16_t a;
-  std::uint32_t b;
-};
 
 struct NonTrivial {
   ~NonTrivial() {}
@@ -44,17 +40,21 @@ public:
 };
 
 static_assert(can_read<std::uint32_t>::value,
-              "read should accept trivially copyable scalar types");
+              "read should accept scalar types");
 static_assert(can_write<std::uint32_t>::value,
-              "write should accept trivially copyable scalar types");
-static_assert(can_read<Sample>::value,
-              "read should accept trivially copyable struct types");
-static_assert(can_write<Sample>::value,
-              "write should accept trivially copyable struct types");
+              "write should accept scalar types");
+static_assert(can_read<double>::value,
+              "read should accept floating-point scalar types");
+static_assert(can_write<double>::value,
+              "write should accept floating-point scalar types");
 static_assert(!can_read<std::uint32_t *>::value,
               "read should reject pointer types");
 static_assert(!can_write<std::uint32_t *>::value,
               "write should reject pointer types");
+static_assert(!can_read<std::pair<std::uint32_t, std::uint32_t>>::value,
+              "read should reject non-scalar aggregate types");
+static_assert(!can_write<std::pair<std::uint32_t, std::uint32_t>>::value,
+              "write should reject non-scalar aggregate types");
 static_assert(!can_read<NonTrivial>::value,
               "read should reject non-trivially-copyable types");
 static_assert(!can_write<NonTrivial>::value,
@@ -72,16 +72,38 @@ bool test_integer_roundtrip() {
   return actual == expected;
 }
 
-bool test_struct_roundtrip() {
+bool test_default_integer_encoding_is_little_endian() {
   std::stringstream stream;
-  const Sample expected = {0x00FFu, 0xCAFEBABEu};
-  Sample actual = {0u, 0u};
+  const std::uint32_t expected = 0x12345678u;
 
   binio::write(stream, expected);
-  stream.seekg(0);
-  binio::read(stream, actual);
+  const std::string bytes = stream.str();
 
-  return actual.a == expected.a && actual.b == expected.b;
+  return bytes.size() == sizeof(expected) &&
+         static_cast<unsigned char>(bytes[0]) == 0x78u &&
+         static_cast<unsigned char>(bytes[1]) == 0x56u &&
+         static_cast<unsigned char>(bytes[2]) == 0x34u &&
+         static_cast<unsigned char>(bytes[3]) == 0x12u;
+}
+
+bool test_big_endian_integer_encoding() {
+  std::stringstream stream;
+  const std::uint32_t expected = 0x12345678u;
+  std::uint32_t actual = 0u;
+
+  binio::write(stream, expected, binio::Endianness::Big);
+  const std::string bytes = stream.str();
+  if (!(bytes.size() == sizeof(expected) &&
+        static_cast<unsigned char>(bytes[0]) == 0x12u &&
+        static_cast<unsigned char>(bytes[1]) == 0x34u &&
+        static_cast<unsigned char>(bytes[2]) == 0x56u &&
+        static_cast<unsigned char>(bytes[3]) == 0x78u)) {
+    return false;
+  }
+
+  stream.seekg(0);
+  binio::read(stream, actual, binio::Endianness::Big);
+  return actual == expected;
 }
 
 bool test_partial_read_sets_failbit() {
@@ -104,8 +126,13 @@ int main() {
     return 1;
   }
 
-  if (!test_struct_roundtrip()) {
-    std::cerr << "test_struct_roundtrip failed\n";
+  if (!test_default_integer_encoding_is_little_endian()) {
+    std::cerr << "test_default_integer_encoding_is_little_endian failed\n";
+    return 1;
+  }
+
+  if (!test_big_endian_integer_encoding()) {
+    std::cerr << "test_big_endian_integer_encoding failed\n";
     return 1;
   }
 

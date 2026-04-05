@@ -12,6 +12,7 @@ binio_dep = declare_dependency(
 subdir('tests')
 
 install_headers(
+    'include/binio/endianness.hpp',
     'include/binio/read.hpp',
     'include/binio/write.hpp',
     subdir: 'binio',
