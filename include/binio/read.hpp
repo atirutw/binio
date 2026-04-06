@@ -3,6 +3,7 @@
 
 #include "binio/endianness.hpp"
 
+#include <cstddef>
 #include <istream>
 #include <type_traits>
 
@@ -25,6 +26,20 @@ void read(std::istream &stream, T &value,
   }
 
   value = storage;
+}
+
+template <typename T, std::size_t N,
+          typename std::enable_if<(std::is_arithmetic<T>::value &&
+                                   !std::is_pointer<T>::value) ||
+                                  std::is_enum<T>::value>::type * = nullptr>
+void read(std::istream &stream, T (&values)[N],
+          Endianness endianness = Endianness::Little) {
+  for (std::size_t i = 0; i < N; ++i) {
+    read(stream, values[i], endianness);
+    if (stream.fail()) {
+      return;
+    }
+  }
 }
 
 } // namespace binio

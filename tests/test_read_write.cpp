@@ -1,6 +1,7 @@
 #include "binio/read.hpp"
 #include "binio/write.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <sstream>
@@ -47,6 +48,10 @@ static_assert(can_read<double>::value,
               "read should accept floating-point scalar types");
 static_assert(can_write<double>::value,
               "write should accept floating-point scalar types");
+static_assert(can_read<std::uint32_t[2]>::value,
+              "read should accept C array types of scalar elements");
+static_assert(can_write<std::uint32_t[2]>::value,
+              "write should accept C array types of scalar elements");
 static_assert(!can_read<std::uint32_t *>::value,
               "read should reject pointer types");
 static_assert(!can_write<std::uint32_t *>::value,
@@ -118,6 +123,24 @@ bool test_partial_read_sets_failbit() {
   return stream.fail();
 }
 
+bool test_integer_array_roundtrip() {
+  std::stringstream stream;
+  const std::uint16_t expected[3] = {0x1234u, 0xABCDu, 0x00FFu};
+  std::uint16_t actual[3] = {0u, 0u, 0u};
+
+  binio::write(stream, expected, binio::Endianness::Big);
+  stream.seekg(0);
+  binio::read(stream, actual, binio::Endianness::Big);
+
+  for (std::size_t i = 0; i < 3; ++i) {
+    if (actual[i] != expected[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 } // namespace
 
 int main() {
@@ -138,6 +161,11 @@ int main() {
 
   if (!test_partial_read_sets_failbit()) {
     std::cerr << "test_partial_read_sets_failbit failed\n";
+    return 1;
+  }
+
+  if (!test_integer_array_roundtrip()) {
+    std::cerr << "test_integer_array_roundtrip failed\n";
     return 1;
   }
 
