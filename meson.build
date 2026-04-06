@@ -4,6 +4,7 @@ project('binio', 'cpp',
         'cpp_std=c++11',
     ],
 )
+add_project_arguments('-pedantic-errors', language: 'cpp')
 
 binio_dep = declare_dependency(
     include_directories: include_directories('include')
